@@ -240,6 +240,7 @@ export class ResearchService {
     prompt?: string,
     maxTokens?: number,
     temperature?: number,
+    context?: string,
   ): Promise<{ text: string | null; error: string | null }> {
     const workerUrl = this.configService.get('WORKER_URL', 'http://localhost:8000');
     try {
@@ -248,6 +249,7 @@ export class ResearchService {
           prompt: prompt || '',
           max_tokens: maxTokens || 200,
           temperature: temperature || 0.8,
+          context: context || null,
         }),
       );
       return response.data;

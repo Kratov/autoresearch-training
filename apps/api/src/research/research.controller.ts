@@ -49,6 +49,11 @@ class GenerateTextDto {
   @ApiPropertyOptional({ default: 0.8 })
   @IsOptional()
   temperature?: number;
+
+  @ApiPropertyOptional({ description: 'Context/prefix to prepend to prompt' })
+  @IsOptional()
+  @IsString()
+  context?: string;
 }
 
 @ApiTags('research')
@@ -108,7 +113,7 @@ export class ResearchController {
   @ApiOperation({ summary: 'Generate text from the trained model' })
   @ApiResponse({ status: 200, description: 'Generated text' })
   async generateText(@Body() dto: GenerateTextDto) {
-    return this.researchService.generateText(dto.prompt, dto.maxTokens, dto.temperature);
+    return this.researchService.generateText(dto.prompt, dto.maxTokens, dto.temperature, dto.context);
   }
 
   @Get('model-status')

@@ -251,6 +251,7 @@ class GenerateRequest(BaseModel):
     prompt: str = ""
     max_tokens: int = 200
     temperature: float = 0.8
+    context: Optional[str] = None  # Context/prefix to prepend to prompt
 
 
 @app.post("/generate")
@@ -266,8 +267,13 @@ async def generate_text(request: GenerateRequest):
         return {"error": "Cannot generate while training is in progress.", "text": None}
 
     try:
+        # Combine context and prompt
+        full_prompt = request.prompt or "\n"
+        if request.context:
+            full_prompt = request.context + full_prompt
+
         text = state.last_trainer.generate_text(
-            prompt=request.prompt or "\n",
+            prompt=full_prompt,
             max_tokens=request.max_tokens,
             temperature=request.temperature,
         )

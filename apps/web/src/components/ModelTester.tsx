@@ -14,6 +14,8 @@ export function ModelTester() {
   const [hasModel, setHasModel] = useState(false)
   const [temperature, setTemperature] = useState(0.8)
   const [maxTokens, setMaxTokens] = useState(200)
+  const [context, setContext] = useState('')
+  const [showAdvanced, setShowAdvanced] = useState(false)
 
   // Check if model is available
   useEffect(() => {
@@ -50,6 +52,7 @@ export function ModelTester() {
           prompt: prompt || '\n',
           maxTokens,
           temperature,
+          context: context || undefined,
         }),
       })
 
@@ -141,6 +144,85 @@ export function ModelTester() {
               Length of generated text (in characters)
             </p>
           </div>
+        </div>
+
+        {/* Advanced Settings */}
+        <div className="border border-gray-200 dark:border-gray-700 rounded-md">
+          <button
+            type="button"
+            onClick={() => setShowAdvanced(!showAdvanced)}
+            className="w-full px-3 py-2 flex items-center justify-between text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-md"
+          >
+            <span>Advanced Settings</span>
+            <svg
+              className={`w-4 h-4 transform transition-transform ${showAdvanced ? 'rotate-180' : ''}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+          {showAdvanced && (
+            <div className="px-3 pb-3 space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Context / Prefix (optional)
+                </label>
+                <textarea
+                  value={context}
+                  onChange={(e) => setContext(e.target.value)}
+                  placeholder="Set a context that will be prepended to your prompt. E.g., a scene setup, character dialogue format, or writing style example..."
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
+                  rows={4}
+                  disabled={isGenerating || isRunning || !hasModel}
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  This text will be prepended to your prompt to prime the model with a certain style or context.
+                  For example: "ACT I. SCENE I. A desert place.\n\nThunder and lightning. Enter three Witches.\n\nFirst Witch:"
+                </p>
+              </div>
+
+              {/* Preset Contexts */}
+              <div>
+                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">
+                  Quick Presets:
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { label: 'Romeo & Juliet', value: 'ACT II. SCENE II. Capulet\'s orchard.\n\nEnter ROMEO.\n\nROMEO:\n' },
+                    { label: 'Hamlet Soliloquy', value: 'Enter HAMLET.\n\nHAMLET:\nTo be, or not to be, ' },
+                    { label: 'Sonnet', value: 'SONNET\n\nShall I compare thee to a summer\'s day?\nThou art more lovely and more temperate:\n' },
+                    { label: 'Witches', value: 'Thunder. Enter the three Witches.\n\nFirst Witch:\nWhen shall we three meet again?\nIn thunder, lightning, or in rain?\n\nSecond Witch:\n' },
+                  ].map((preset) => (
+                    <button
+                      key={preset.label}
+                      type="button"
+                      onClick={() => {
+                        setContext(preset.value)
+                        setPrompt('')
+                      }}
+                      disabled={isGenerating || isRunning || !hasModel}
+                      className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setContext('')
+                      setPrompt('')
+                    }}
+                    disabled={isGenerating || isRunning || !hasModel}
+                    className="px-2 py-1 text-xs bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded hover:bg-red-200 dark:hover:bg-red-900/50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Clear
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         <button
