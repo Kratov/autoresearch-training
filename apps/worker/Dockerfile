@@ -28,8 +28,17 @@ COPY --chown=worker:worker src ./src
 # Switch to worker user and install
 USER worker
 
-# Install Python dependencies as user (from pyproject.toml)
-RUN pip install --user --no-cache-dir .
+# Install Python dependencies as user
+RUN pip install --user --no-cache-dir \
+    fastapi>=0.109.0 \
+    "uvicorn[standard]>=0.27.0" \
+    httpx>=0.26.0 \
+    websockets>=12.0 \
+    pydantic>=2.5.0 \
+    pydantic-settings>=2.1.0 \
+    torch>=2.1.0 \
+    numpy>=1.26.0 \
+    python-multipart>=0.0.6
 
 # Expose port
 EXPOSE 8000
