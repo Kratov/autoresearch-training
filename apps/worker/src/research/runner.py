@@ -32,11 +32,12 @@ class ResearchRunner:
         """Run the research experiment."""
         logger.info(f"Starting {self.mode.value} experiment: {self.experiment_id}")
 
-        # Use real trainer for demo mode
-        if self.config.get("real_training", False) or self.mode == ResearchMode.CUSTOM:
-            await self._run_real_training()
-        else:
+        # Always use real training (we have GPU)
+        # Set real_training=False in config to use simulation mode for testing
+        if self.config.get("simulation_mode", False):
             await self._run_simulation()
+        else:
+            await self._run_real_training()
 
     async def _run_real_training(self):
         """Run actual GPT training."""

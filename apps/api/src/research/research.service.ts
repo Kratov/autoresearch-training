@@ -136,7 +136,6 @@ export class ResearchService {
           config: {
             ...this.getCurrentConfig().parameters,
             ...trainingSettings,
-            real_training: this.currentMode === 'custom',
           },
         }),
       );
