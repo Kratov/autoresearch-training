@@ -19,6 +19,10 @@ import torch
 import torch.nn as nn
 from torch.nn import functional as F
 
+# Disable torch dynamo to avoid Python version compatibility issues
+import torch._dynamo
+torch._dynamo.config.suppress_errors = True
+
 # Import utilities from prepare.py (not edited by agent)
 from .prepare import DataLoader, evaluate, get_device, prepare_data, Tokenizer, DATA_DIR
 
