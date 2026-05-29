@@ -1,5 +1,19 @@
-# Autoresearch integration module
-# This module will be used to integrate with the autoresearch library
-# when it's cloned and available
+"""Autoresearch module - AI-driven ML research automation."""
 
-__all__ = []
+from .agent import AutoresearchAgent, AgentConfig, run_agent
+from .prepare import prepare_data, DataLoader, evaluate, Tokenizer
+from .train import train, TrainConfig, GPT, GPTConfig
+
+__all__ = [
+    "AutoresearchAgent",
+    "AgentConfig", 
+    "run_agent",
+    "prepare_data",
+    "DataLoader",
+    "evaluate",
+    "Tokenizer",
+    "train",
+    "TrainConfig",
+    "GPT",
+    "GPTConfig",
+]

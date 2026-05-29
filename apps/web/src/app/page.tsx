@@ -8,6 +8,7 @@ import { LogsPanel } from '@/components/LogsPanel'
 import { SettingsPanel } from '@/components/SettingsPanel'
 import { ModelTester } from '@/components/ModelTester'
 import { DatasetManager } from '@/components/DatasetManager'
+import { AutoresearchPanel } from '@/components/AutoresearchPanel'
 
 export default function Home() {
   return (
@@ -31,6 +32,11 @@ export default function Home() {
         {/* Dataset Manager */}
         <div className="mt-6">
           <DatasetManager />
+        </div>
+
+        {/* Autoresearch Agent */}
+        <div className="mt-6">
+          <AutoresearchPanel />
         </div>
 
         <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">

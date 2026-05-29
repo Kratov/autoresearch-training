@@ -270,4 +270,92 @@ export class ResearchService {
       return { has_model: false, is_training: this.isRunning };
     }
   }
+
+  // Autoresearch methods
+
+  async startAutoresearch(
+    maxIterations?: number,
+    targetLoss?: number,
+    anthropicApiKey?: string,
+  ): Promise<{ status: string } | { error: string }> {
+    const workerUrl = this.configService.get('WORKER_URL', 'http://localhost:8000');
+    try {
+      const response = await firstValueFrom(
+        this.httpService.post(`${workerUrl}/autoresearch/start`, {
+          max_iterations: maxIterations || 10,
+          target_loss: targetLoss || 1.2,
+          anthropic_api_key: anthropicApiKey,
+        }),
+      );
+      return response.data;
+    } catch (error) {
+      this.logger.error('Failed to start autoresearch:', error);
+      return { error: 'Failed to start autoresearch' };
+    }
+  }
+
+  async stopAutoresearch(): Promise<{ status: string }> {
+    const workerUrl = this.configService.get('WORKER_URL', 'http://localhost:8000');
+    try {
+      const response = await firstValueFrom(
+        this.httpService.post(`${workerUrl}/autoresearch/stop`),
+      );
+      return response.data;
+    } catch (error) {
+      this.logger.warn('Failed to stop autoresearch:', error);
+      return { status: 'stop_attempted' };
+    }
+  }
+
+  async getAutoresearchStatus(): Promise<Record<string, unknown>> {
+    const workerUrl = this.configService.get('WORKER_URL', 'http://localhost:8000');
+    try {
+      const response = await firstValueFrom(
+        this.httpService.get(`${workerUrl}/autoresearch/status`),
+      );
+      return response.data;
+    } catch (error) {
+      this.logger.warn('Failed to get autoresearch status:', error);
+      return { is_running: false, iteration: 0, best_val_loss: null, history: [] };
+    }
+  }
+
+  async getProgram(): Promise<{ content: string }> {
+    const workerUrl = this.configService.get('WORKER_URL', 'http://localhost:8000');
+    try {
+      const response = await firstValueFrom(
+        this.httpService.get(`${workerUrl}/autoresearch/program`),
+      );
+      return response.data;
+    } catch (error) {
+      this.logger.warn('Failed to get program.md:', error);
+      return { content: '' };
+    }
+  }
+
+  async updateProgram(content: string): Promise<{ status: string }> {
+    const workerUrl = this.configService.get('WORKER_URL', 'http://localhost:8000');
+    try {
+      const response = await firstValueFrom(
+        this.httpService.put(`${workerUrl}/autoresearch/program`, { content }),
+      );
+      return response.data;
+    } catch (error) {
+      this.logger.error('Failed to update program.md:', error);
+      return { status: 'failed' };
+    }
+  }
+
+  async getTrainPy(): Promise<{ content: string }> {
+    const workerUrl = this.configService.get('WORKER_URL', 'http://localhost:8000');
+    try {
+      const response = await firstValueFrom(
+        this.httpService.get(`${workerUrl}/autoresearch/train`),
+      );
+      return response.data;
+    } catch (error) {
+      this.logger.warn('Failed to get train.py:', error);
+      return { content: '' };
+    }
+  }
 }

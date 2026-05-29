@@ -378,6 +378,123 @@ async def preview_dataset(dataset_id: str, max_chars: int = 1000):
     return {"error": "Dataset not found or not downloaded"}
 
 
+## Autoresearch Agent Endpoints ##
+
+class AutoresearchStartRequest(BaseModel):
+    max_iterations: int = 10
+    target_loss: float = 1.20
+    anthropic_api_key: Optional[str] = None
+
+
+@app.post("/autoresearch/start")
+async def start_autoresearch(request: AutoresearchStartRequest):
+    """Start the autoresearch agent loop."""
+    if state.is_running:
+        return {"error": "An experiment is already running"}
+
+    if hasattr(state, 'agent') and state.agent and state.agent.state.is_running:
+        return {"error": "Autoresearch agent is already running"}
+
+    try:
+        from .autoresearch.agent import AutoresearchAgent, AgentConfig
+
+        config = AgentConfig(
+            max_iterations=request.max_iterations,
+            target_loss=request.target_loss,
+            anthropic_api_key=request.anthropic_api_key,
+        )
+
+        async def agent_callback(data):
+            await send_callback({"experimentId": "autoresearch", **data})
+            for ws in state.websocket_clients:
+                try:
+                    import json
+                    await ws.send_text(json.dumps({"type": "autoresearch", **data}))
+                except Exception:
+                    pass
+
+        state.agent = AutoresearchAgent(config, agent_callback, broadcast_log)
+
+        # Run in background
+        asyncio.create_task(run_autoresearch_task())
+
+        return {"status": "started", "max_iterations": request.max_iterations}
+
+    except Exception as e:
+        logger.error(f"Failed to start autoresearch: {e}")
+        return {"error": str(e)}
+
+
+async def run_autoresearch_task():
+    """Background task for autoresearch agent."""
+    try:
+        result = await state.agent.run()
+        await broadcast_log(f"[AUTORESEARCH] Completed: best_val_loss={result.get('best_val_loss', 'N/A')}")
+    except Exception as e:
+        logger.error(f"Autoresearch failed: {e}")
+        await broadcast_log(f"[AUTORESEARCH] Failed: {e}")
+    finally:
+        state.agent = None
+
+
+@app.post("/autoresearch/stop")
+async def stop_autoresearch():
+    """Stop the autoresearch agent."""
+    if hasattr(state, 'agent') and state.agent:
+        state.agent.stop()
+        return {"status": "stopping"}
+    return {"status": "not_running"}
+
+
+@app.get("/autoresearch/status")
+async def get_autoresearch_status():
+    """Get autoresearch agent status."""
+    if hasattr(state, 'agent') and state.agent:
+        return {
+            "is_running": state.agent.state.is_running,
+            "iteration": state.agent.state.iteration,
+            "best_val_loss": state.agent.state.best_val_loss,
+            "history": [
+                {
+                    "iteration": r.iteration,
+                    "val_loss": r.val_loss,
+                    "changes": r.changes_made,
+                }
+                for r in state.agent.state.history
+            ],
+        }
+    return {"is_running": False, "iteration": 0, "best_val_loss": None, "history": []}
+
+
+@app.get("/autoresearch/program")
+async def get_program():
+    """Get the current program.md content."""
+    from pathlib import Path
+    program_path = Path(__file__).parent / "autoresearch" / "program.md"
+    if program_path.exists():
+        return {"content": program_path.read_text()}
+    return {"content": "", "error": "program.md not found"}
+
+
+@app.put("/autoresearch/program")
+async def update_program(content: str = Form(...)):
+    """Update program.md content."""
+    from pathlib import Path
+    program_path = Path(__file__).parent / "autoresearch" / "program.md"
+    program_path.write_text(content)
+    return {"status": "updated"}
+
+
+@app.get("/autoresearch/train")
+async def get_train_py():
+    """Get the current train.py content."""
+    from pathlib import Path
+    train_path = Path(__file__).parent / "autoresearch" / "train.py"
+    if train_path.exists():
+        return {"content": train_path.read_text()}
+    return {"content": "", "error": "train.py not found"}
+
+
 @app.websocket("/logs")
 async def websocket_logs(websocket: WebSocket):
     await websocket.accept()

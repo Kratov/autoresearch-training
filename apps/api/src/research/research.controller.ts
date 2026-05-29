@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Put, Body } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { ResearchService, ResearchMode, ResearchConfig } from './research.service';
-import { IsString, IsOptional, IsObject } from 'class-validator';
+import { IsString, IsOptional, IsObject, IsNumber } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 class UpdateModeDto {
@@ -54,6 +54,29 @@ class GenerateTextDto {
   @IsOptional()
   @IsString()
   context?: string;
+}
+
+class AutoresearchStartDto {
+  @ApiPropertyOptional({ default: 10 })
+  @IsOptional()
+  @IsNumber()
+  maxIterations?: number;
+
+  @ApiPropertyOptional({ default: 1.2 })
+  @IsOptional()
+  @IsNumber()
+  targetLoss?: number;
+
+  @ApiPropertyOptional({ description: 'Anthropic API key (or use env var)' })
+  @IsOptional()
+  @IsString()
+  anthropicApiKey?: string;
+}
+
+class UpdateProgramDto {
+  @ApiProperty({ description: 'New program.md content' })
+  @IsString()
+  content: string;
 }
 
 @ApiTags('research')
@@ -120,5 +143,43 @@ export class ResearchController {
   @ApiOperation({ summary: 'Check if a model is available for generation' })
   async getModelStatus() {
     return this.researchService.getModelStatus();
+  }
+
+  // Autoresearch endpoints
+
+  @Post('autoresearch/start')
+  @ApiOperation({ summary: 'Start the autoresearch agent loop' })
+  async startAutoresearch(@Body() dto: AutoresearchStartDto) {
+    return this.researchService.startAutoresearch(dto.maxIterations, dto.targetLoss, dto.anthropicApiKey);
+  }
+
+  @Post('autoresearch/stop')
+  @ApiOperation({ summary: 'Stop the autoresearch agent' })
+  async stopAutoresearch() {
+    return this.researchService.stopAutoresearch();
+  }
+
+  @Get('autoresearch/status')
+  @ApiOperation({ summary: 'Get autoresearch agent status' })
+  async getAutoresearchStatus() {
+    return this.researchService.getAutoresearchStatus();
+  }
+
+  @Get('autoresearch/program')
+  @ApiOperation({ summary: 'Get program.md content' })
+  async getProgram() {
+    return this.researchService.getProgram();
+  }
+
+  @Put('autoresearch/program')
+  @ApiOperation({ summary: 'Update program.md content' })
+  async updateProgram(@Body() dto: UpdateProgramDto) {
+    return this.researchService.updateProgram(dto.content);
+  }
+
+  @Get('autoresearch/train')
+  @ApiOperation({ summary: 'Get train.py content' })
+  async getTrainPy() {
+    return this.researchService.getTrainPy();
   }
 }
