@@ -16,7 +16,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'
 
 interface IterationResult {
   iteration: number
-  val_loss: number
+  val_loss: number | null
   changes: string
 }
 
@@ -377,12 +377,12 @@ export function AutoresearchPanel() {
                         </span>
                         <span
                           className={`text-sm font-mono ${
-                            result.val_loss <= (status.best_val_loss || Infinity)
+                            result.val_loss !== null && result.val_loss <= (status.best_val_loss || Infinity)
                               ? 'text-green-600 dark:text-green-400'
                               : 'text-gray-600 dark:text-gray-400'
                           }`}
                         >
-                          val_loss: {result.val_loss.toFixed(4)}
+                          val_loss: {result.val_loss !== null ? result.val_loss.toFixed(4) : 'Failed'}
                         </span>
                       </div>
                       <p className="text-xs text-gray-600 dark:text-gray-400">

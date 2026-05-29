@@ -11,17 +11,17 @@ The agent will iteratively improve this file based on program.md instructions.
 """
 
 import math
+import os
 import time
 from dataclasses import dataclass
 from typing import Optional, Callable
 
+# Disable torch dynamo before importing torch to avoid compatibility issues
+os.environ["TORCHDYNAMO_DISABLE"] = "1"
+
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
-
-# Disable torch dynamo to avoid Python version compatibility issues
-import torch._dynamo
-torch._dynamo.config.suppress_errors = True
 
 # Import utilities from prepare.py (not edited by agent)
 from .prepare import DataLoader, evaluate, get_device, prepare_data, Tokenizer, DATA_DIR
@@ -148,7 +148,7 @@ class GPT(nn.Module):
 
         # Count parameters
         n_params = sum(p.numel() for p in self.parameters())
-        print(f"Model parameters: {n_params/1e6:.2f}M")
+        print(f"Model parameters: {n_params/1e6:.2f}M", flush=True)
 
     def _init_weights(self, module):
         if isinstance(module, nn.Linear):
@@ -331,7 +331,7 @@ def train(
     device = get_device()
 
     def log(msg: str):
-        print(msg)
+        print(msg, flush=True)
         if log_callback:
             log_callback(msg)
 

@@ -117,6 +117,9 @@ class AutoresearchAgent:
 
             # Create a wrapper script that runs training and outputs JSON result
             wrapper_code = '''
+import os
+os.environ["TORCHDYNAMO_DISABLE"] = "1"
+
 import sys
 import json
 import torch
@@ -132,7 +135,7 @@ if "autoresearch.prepare" in sys.modules:
 
 from autoresearch.train import train, TrainConfig
 
-config = TrainConfig(max_iters=200, eval_interval=25)
+config = TrainConfig(max_iters=2, eval_interval=1)
 result = train(config=config)
 
 # Save model and tokenizer for later testing
@@ -149,7 +152,7 @@ torch.save({
 with open(tokenizer_path, "wb") as f:
     pickle.dump({"stoi": tokenizer.stoi, "itos": tokenizer.itos, "vocab_size": tokenizer.vocab_size}, f)
 
-print(f"Model saved to {model_path}")
+print(f"Model saved to {model_path}", flush=True)
 
 # Output result as JSON
 output = {
@@ -159,31 +162,46 @@ output = {
     "elapsed_time": float(result["elapsed_time"]),
     "model_saved": True,
 }
-print("RESULT_JSON:" + json.dumps(output))
+print("RESULT_JSON:" + json.dumps(output), flush=True)
 '''
 
             process = await asyncio.create_subprocess_exec(
-                "python", "-c", wrapper_code,
+                "python", "-u", "-c", wrapper_code,  # -u for unbuffered output
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
                 cwd="/app/src"
             )
 
-            stdout, stderr = await process.communicate()
+            # Stream output in real-time
+            stdout_lines = []
+            stderr_lines = []
 
-            # Log output
-            output = stdout.decode()
-            for line in output.split('\n'):
-                if line and not line.startswith("RESULT_JSON:"):
-                    await self.log(f"  {line}")
+            async def read_stdout():
+                while True:
+                    line = await process.stdout.readline()
+                    if not line:
+                        break
+                    decoded = line.decode().rstrip()
+                    stdout_lines.append(decoded)
+                    if decoded and not decoded.startswith("RESULT_JSON:"):
+                        await self.log(f"  {decoded}")
 
-            if stderr:
-                for line in stderr.decode().split('\n'):
-                    if line:
-                        await self.log(f"  [stderr] {line}")
+            async def read_stderr():
+                while True:
+                    line = await process.stderr.readline()
+                    if not line:
+                        break
+                    decoded = line.decode().rstrip()
+                    stderr_lines.append(decoded)
+                    if decoded:
+                        await self.log(f"  [stderr] {decoded}")
 
-            # Parse result
-            for line in output.split('\n'):
+            # Run both readers concurrently
+            await asyncio.gather(read_stdout(), read_stderr())
+            await process.wait()
+
+            # Parse result from stdout
+            for line in stdout_lines:
                 if line.startswith("RESULT_JSON:"):
                     result_json = line[len("RESULT_JSON:"):]
                     return json.loads(result_json)

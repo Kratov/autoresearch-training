@@ -81,9 +81,9 @@ def download_data(dataset: str = "shakespeare") -> Path:
     filepath = DATA_DIR / info["filename"]
 
     if not filepath.exists():
-        print(f"Downloading {dataset} dataset...")
+        print(f"Downloading {dataset} dataset...", flush=True)
         urllib.request.urlretrieve(info["url"], filepath)
-        print(f"Downloaded to {filepath}")
+        print(f"Downloaded to {filepath}", flush=True)
 
     return filepath
 
@@ -98,13 +98,13 @@ def prepare_data(dataset: str = "shakespeare") -> tuple[Path, Path, Tokenizer]:
     with open(data_path, 'r', encoding='utf-8') as f:
         text = f.read()
 
-    print(f"Dataset: {len(text):,} characters")
+    print(f"Dataset: {len(text):,} characters", flush=True)
 
     # Train tokenizer
     tokenizer = Tokenizer()
     tokenizer.train(text)
     tokenizer.save(DATA_DIR / "tokenizer.pkl")
-    print(f"Vocabulary size: {tokenizer.vocab_size}")
+    print(f"Vocabulary size: {tokenizer.vocab_size}", flush=True)
 
     # Encode data
     data = torch.tensor(tokenizer.encode(text), dtype=torch.long)
@@ -121,8 +121,8 @@ def prepare_data(dataset: str = "shakespeare") -> tuple[Path, Path, Tokenizer]:
     train_data.numpy().astype(np.uint16).tofile(train_path)
     val_data.numpy().astype(np.uint16).tofile(val_path)
 
-    print(f"Train: {len(train_data):,} tokens")
-    print(f"Val: {len(val_data):,} tokens")
+    print(f"Train: {len(train_data):,} tokens", flush=True)
+    print(f"Val: {len(val_data):,} tokens", flush=True)
 
     return train_path, val_path, tokenizer
 
@@ -176,4 +176,4 @@ if __name__ == "__main__":
     import sys
     dataset = sys.argv[1] if len(sys.argv) > 1 else "shakespeare"
     prepare_data(dataset)
-    print("Data preparation complete!")
+    print("Data preparation complete!", flush=True)

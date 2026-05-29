@@ -32,6 +32,7 @@ COPY --chown=worker:worker src ./src
 USER worker
 
 # Install Python dependencies as user
+# Pin PyTorch to 2.2.2 for Python 3.11 compatibility (2.6.x has dynamo bugs)
 RUN pip install --user --no-cache-dir \
     "fastapi>=0.109.0" \
     "uvicorn[standard]>=0.27.0" \
@@ -39,8 +40,8 @@ RUN pip install --user --no-cache-dir \
     "websockets>=12.0" \
     "pydantic>=2.5.0" \
     "pydantic-settings>=2.1.0" \
-    "torch>=2.1.0" \
-    "numpy>=1.26.0" \
+    "torch==2.2.2" \
+    "numpy>=1.26.0,<2.0.0" \
     "python-multipart>=0.0.6"
 
 # Expose port
