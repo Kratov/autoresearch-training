@@ -119,6 +119,8 @@ class AutoresearchAgent:
             wrapper_code = '''
 import sys
 import json
+import torch
+import pickle
 sys.path.insert(0, "/app/src")
 
 # Force reimport of the module
@@ -133,12 +135,29 @@ from autoresearch.train import train, TrainConfig
 config = TrainConfig(max_iters=200, eval_interval=25)
 result = train(config=config)
 
+# Save model and tokenizer for later testing
+model = result["model"]
+tokenizer = result["tokenizer"]
+model_path = "/app/data/autoresearch_model.pt"
+tokenizer_path = "/app/data/autoresearch_tokenizer.pkl"
+
+torch.save({
+    "model_state_dict": model.state_dict(),
+    "config": model.config,
+}, model_path)
+
+with open(tokenizer_path, "wb") as f:
+    pickle.dump({"stoi": tokenizer.stoi, "itos": tokenizer.itos, "vocab_size": tokenizer.vocab_size}, f)
+
+print(f"Model saved to {model_path}")
+
 # Output result as JSON
 output = {
     "success": True,
     "best_val_loss": float(result["best_val_loss"]),
     "final_train_loss": float(result["final_train_loss"]),
     "elapsed_time": float(result["elapsed_time"]),
+    "model_saved": True,
 }
 print("RESULT_JSON:" + json.dumps(output))
 '''

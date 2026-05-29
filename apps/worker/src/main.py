@@ -286,11 +286,91 @@ async def generate_text(request: GenerateRequest):
 @app.get("/model-status")
 async def get_model_status():
     """Check if a model is available for generation."""
-    has_model = state.last_trainer is not None and state.last_trainer.is_model_ready()
+    from pathlib import Path
+    model_loaded = state.last_trainer is not None and state.last_trainer.is_model_ready()
+    autoresearch_model_exists = Path("/app/data/autoresearch_model.pt").exists()
+
+    # Determine model source
+    model_source = None
+    if model_loaded:
+        # Check if it's an autoresearch model by looking for the class name
+        if hasattr(state.last_trainer, '__class__') and 'AutoresearchModel' in state.last_trainer.__class__.__name__:
+            model_source = "autoresearch"
+        else:
+            model_source = "manual"
+
     return {
-        "has_model": has_model,
+        "has_model": model_loaded,
         "is_training": state.is_running,
+        "model_source": model_source,
+        "autoresearch_model_available": autoresearch_model_exists,
     }
+
+
+@app.post("/load-autoresearch-model")
+async def load_autoresearch_model():
+    """Load the saved autoresearch model for generation."""
+    from pathlib import Path
+    import torch
+    import pickle
+
+    model_path = Path("/app/data/autoresearch_model.pt")
+    tokenizer_path = Path("/app/data/autoresearch_tokenizer.pkl")
+
+    if not model_path.exists() or not tokenizer_path.exists():
+        return {"error": "No autoresearch model found. Run autoresearch first."}
+
+    try:
+        # Load model
+        from .autoresearch.train import GPT, GPTConfig
+
+        checkpoint = torch.load(model_path, map_location="cuda" if torch.cuda.is_available() else "cpu")
+        config = checkpoint["config"]
+
+        model = GPT(config)
+        model.load_state_dict(checkpoint["model_state_dict"])
+        model.eval()
+
+        if torch.cuda.is_available():
+            model = model.cuda()
+
+        # Load tokenizer
+        with open(tokenizer_path, "rb") as f:
+            tok_data = pickle.load(f)
+
+        # Create a simple wrapper class for generation
+        class AutoresearchModel:
+            def __init__(self, model, tok_data):
+                self.model = model
+                self.stoi = tok_data["stoi"]
+                self.itos = tok_data["itos"]
+                self.vocab_size = tok_data["vocab_size"]
+                self.device = "cuda" if torch.cuda.is_available() else "cpu"
+
+            def is_model_ready(self):
+                return True
+
+            def generate_text(self, prompt: str = "\n", max_tokens: int = 200, temperature: float = 0.8) -> str:
+                # Encode prompt
+                encoded = [self.stoi.get(c, 0) for c in prompt if c in self.stoi]
+                if not encoded:
+                    encoded = [0]
+
+                context = torch.tensor([encoded], dtype=torch.long, device=self.device)
+
+                with torch.no_grad():
+                    generated = self.model.generate(context, max_new_tokens=max_tokens, temperature=temperature)
+
+                return "".join([self.itos.get(t, "") for t in generated[0].tolist()])
+
+        state.last_trainer = AutoresearchModel(model, tok_data)
+        logger.info("Autoresearch model loaded successfully")
+
+        return {"status": "loaded", "model_source": "autoresearch"}
+
+    except Exception as e:
+        logger.error(f"Failed to load autoresearch model: {e}")
+        return {"error": str(e)}
 
 
 ## Dataset Management Endpoints ##

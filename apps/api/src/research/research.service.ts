@@ -258,7 +258,7 @@ export class ResearchService {
     }
   }
 
-  async getModelStatus(): Promise<{ has_model: boolean; is_training: boolean }> {
+  async getModelStatus(): Promise<{ has_model: boolean; is_training: boolean; model_source?: string }> {
     const workerUrl = this.configService.get('WORKER_URL', 'http://localhost:8000');
     try {
       const response = await firstValueFrom(
@@ -268,6 +268,19 @@ export class ResearchService {
     } catch (error) {
       this.logger.warn('Failed to get model status:', error);
       return { has_model: false, is_training: this.isRunning };
+    }
+  }
+
+  async loadAutoresearchModel(): Promise<{ status?: string; error?: string }> {
+    const workerUrl = this.configService.get('WORKER_URL', 'http://localhost:8000');
+    try {
+      const response = await firstValueFrom(
+        this.httpService.post(`${workerUrl}/load-autoresearch-model`),
+      );
+      return response.data;
+    } catch (error) {
+      this.logger.error('Failed to load autoresearch model:', error);
+      return { error: 'Failed to load autoresearch model' };
     }
   }
 

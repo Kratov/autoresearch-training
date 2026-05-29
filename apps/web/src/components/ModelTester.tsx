@@ -12,6 +12,9 @@ export function ModelTester() {
   const [isGenerating, setIsGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [hasModel, setHasModel] = useState(false)
+  const [modelSource, setModelSource] = useState<string | null>(null)
+  const [autoresearchAvailable, setAutoresearchAvailable] = useState(false)
+  const [isLoadingModel, setIsLoadingModel] = useState(false)
   const [temperature, setTemperature] = useState(0.8)
   const [maxTokens, setMaxTokens] = useState(200)
   const [context, setContext] = useState('')
@@ -24,8 +27,12 @@ export function ModelTester() {
         const response = await fetch(`${API_URL}/api/research/model-status`)
         const data = await response.json()
         setHasModel(data.has_model)
+        setModelSource(data.model_source || null)
+        setAutoresearchAvailable(data.autoresearch_model_available || false)
       } catch {
         setHasModel(false)
+        setModelSource(null)
+        setAutoresearchAvailable(false)
       }
     }
 
@@ -33,6 +40,27 @@ export function ModelTester() {
     const interval = setInterval(checkModel, 5000)
     return () => clearInterval(interval)
   }, [])
+
+  const loadAutoresearchModel = async () => {
+    setIsLoadingModel(true)
+    setError(null)
+    try {
+      const response = await fetch(`${API_URL}/api/research/load-autoresearch-model`, {
+        method: 'POST',
+      })
+      const data = await response.json()
+      if (data.error) {
+        setError(data.error)
+      } else {
+        setHasModel(true)
+        setModelSource('autoresearch')
+      }
+    } catch {
+      setError('Failed to load autoresearch model')
+    } finally {
+      setIsLoadingModel(false)
+    }
+  }
 
   const handleGenerate = async () => {
     if (isRunning) {
@@ -73,21 +101,37 @@ export function ModelTester() {
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
       <div className="mb-4">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-          <span>Test the Model</span>
-          {hasModel ? (
-            <span className="text-xs px-2 py-0.5 bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 rounded-full">
-              Model Ready
-            </span>
-          ) : (
-            <span className="text-xs px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded-full">
-              No Model
-            </span>
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+            <span>Test the Model</span>
+            {hasModel ? (
+              <span className="text-xs px-2 py-0.5 bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 rounded-full">
+                {modelSource === 'autoresearch' ? 'Autoresearch Model' : 'Model Ready'}
+              </span>
+            ) : (
+              <span className="text-xs px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded-full">
+                No Model
+              </span>
+            )}
+          </h2>
+          {autoresearchAvailable && !hasModel && (
+            <button
+              onClick={loadAutoresearchModel}
+              disabled={isLoadingModel}
+              className="px-3 py-1 text-xs bg-purple-600 hover:bg-purple-700 text-white rounded disabled:opacity-50"
+            >
+              {isLoadingModel ? 'Loading...' : 'Load Autoresearch Model'}
+            </button>
           )}
-        </h2>
+        </div>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
           Generate Shakespeare-style text from your trained model. Enter a prompt or leave empty for a random start.
         </p>
+        {autoresearchAvailable && !hasModel && (
+          <p className="text-sm text-purple-600 dark:text-purple-400 mt-1">
+            An autoresearch model is available. Click &quot;Load Autoresearch Model&quot; to use it.
+          </p>
+        )}
       </div>
 
       {/* Input Section */}

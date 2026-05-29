@@ -145,6 +145,12 @@ export class ResearchController {
     return this.researchService.getModelStatus();
   }
 
+  @Post('load-autoresearch-model')
+  @ApiOperation({ summary: 'Load the autoresearch model for testing' })
+  async loadAutoresearchModel() {
+    return this.researchService.loadAutoresearchModel();
+  }
+
   // Autoresearch endpoints
 
   @Post('autoresearch/start')
