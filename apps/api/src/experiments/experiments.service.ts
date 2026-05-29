@@ -77,8 +77,11 @@ export class ExperimentsService {
   }
 
   async deleteAll(): Promise<{ deleted: number }> {
-    const result = await this.experimentsRepository.delete({});
-    return { deleted: result.affected || 0 };
+    const count = await this.experimentsRepository.count();
+    if (count > 0) {
+      await this.experimentsRepository.clear();
+    }
+    return { deleted: count };
   }
 
   async getStats() {
