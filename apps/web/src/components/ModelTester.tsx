@@ -179,7 +179,7 @@ export function ModelTester() {
                 />
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                   This text will be prepended to your prompt to prime the model with a certain style or context.
-                  For example: "ACT I. SCENE I. A desert place.\n\nThunder and lightning. Enter three Witches.\n\nFirst Witch:"
+                  For example: &quot;ACT I. SCENE I. A desert place...&quot;
                 </p>
               </div>
 
