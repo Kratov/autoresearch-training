@@ -111,35 +111,68 @@ class AutoresearchAgent:
         await self.log("Running training...")
 
         try:
-            # Import and run training
-            # We need to reload the module to pick up changes
-            import importlib
-            from . import train as train_module
-            importlib.reload(train_module)
+            # Run train.py as a subprocess to pick up code changes
+            import subprocess
+            import json
 
-            # Create a simple callback to capture metrics
-            metrics = {"iterations": []}
+            # Create a wrapper script that runs training and outputs JSON result
+            wrapper_code = '''
+import sys
+import json
+sys.path.insert(0, "/app/src")
 
-            def training_callback(data):
-                metrics["iterations"].append(data)
+# Force reimport of the module
+import importlib
+if "autoresearch.train" in sys.modules:
+    del sys.modules["autoresearch.train"]
+if "autoresearch.prepare" in sys.modules:
+    del sys.modules["autoresearch.prepare"]
 
-            # Run training with reduced iterations for faster feedback
-            from .train import train, TrainConfig
-            config = TrainConfig(max_iters=200, eval_interval=25)
+from autoresearch.train import train, TrainConfig
 
-            result = await asyncio.to_thread(
-                train,
-                config=config,
-                callback=training_callback,
-                log_callback=lambda msg: asyncio.run(self.log(f"  {msg}")),
+config = TrainConfig(max_iters=200, eval_interval=25)
+result = train(config=config)
+
+# Output result as JSON
+output = {
+    "success": True,
+    "best_val_loss": float(result["best_val_loss"]),
+    "final_train_loss": float(result["final_train_loss"]),
+    "elapsed_time": float(result["elapsed_time"]),
+}
+print("RESULT_JSON:" + json.dumps(output))
+'''
+
+            process = await asyncio.create_subprocess_exec(
+                "python", "-c", wrapper_code,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                cwd="/app/src"
             )
 
+            stdout, stderr = await process.communicate()
+
+            # Log output
+            output = stdout.decode()
+            for line in output.split('\n'):
+                if line and not line.startswith("RESULT_JSON:"):
+                    await self.log(f"  {line}")
+
+            if stderr:
+                for line in stderr.decode().split('\n'):
+                    if line:
+                        await self.log(f"  [stderr] {line}")
+
+            # Parse result
+            for line in output.split('\n'):
+                if line.startswith("RESULT_JSON:"):
+                    result_json = line[len("RESULT_JSON:"):]
+                    return json.loads(result_json)
+
+            # If no result found, training failed
             return {
-                "success": True,
-                "best_val_loss": result["best_val_loss"],
-                "final_train_loss": result["final_train_loss"],
-                "elapsed_time": result["elapsed_time"],
-                "metrics": metrics,
+                "success": False,
+                "error": f"Training did not produce result. Exit code: {process.returncode}",
             }
 
         except Exception as e:

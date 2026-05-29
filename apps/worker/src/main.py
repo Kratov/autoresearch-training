@@ -450,14 +450,19 @@ async def stop_autoresearch():
 async def get_autoresearch_status():
     """Get autoresearch agent status."""
     if hasattr(state, 'agent') and state.agent:
+        import math
+        best_loss = state.agent.state.best_val_loss
+        # Convert infinity to None for JSON serialization
+        if best_loss is not None and math.isinf(best_loss):
+            best_loss = None
         return {
             "is_running": state.agent.state.is_running,
             "iteration": state.agent.state.iteration,
-            "best_val_loss": state.agent.state.best_val_loss,
+            "best_val_loss": best_loss,
             "history": [
                 {
                     "iteration": r.iteration,
-                    "val_loss": r.val_loss,
+                    "val_loss": r.val_loss if not math.isinf(r.val_loss) else None,
                     "changes": r.changes_made,
                 }
                 for r in state.agent.state.history
