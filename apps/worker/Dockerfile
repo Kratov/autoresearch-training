@@ -21,6 +21,9 @@ RUN useradd -m -u 1000 worker
 
 WORKDIR /app
 
+# Create data directory with proper permissions
+RUN mkdir -p /app/data && chown worker:worker /app/data
+
 # Copy project files
 COPY --chown=worker:worker pyproject.toml ./
 COPY --chown=worker:worker src ./src
