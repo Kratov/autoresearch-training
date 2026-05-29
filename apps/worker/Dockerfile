@@ -28,8 +28,8 @@ COPY --chown=worker:worker src ./src
 # Switch to worker user and install
 USER worker
 
-# Install Python dependencies as user
-RUN pip install --user --no-cache-dir fastapi uvicorn[standard] httpx websockets pydantic pydantic-settings torch numpy
+# Install Python dependencies as user (from pyproject.toml)
+RUN pip install --user --no-cache-dir .
 
 # Expose port
 EXPOSE 8000
